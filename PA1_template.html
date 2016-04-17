@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="pandoc" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<meta name="author" content="Jose Lao" />
+
+
+<title>Reproducible Research - Course Project 1</title>
+
+<script src="PA1_template_files/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="PA1_template_files/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet" />
+<script src="PA1_template_files/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="PA1_template_files/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="PA1_template_files/bootstrap-3.3.5/shim/respond.min.js"></script>
+
+<style type="text/css">code{white-space: pre;}</style>
+<link rel="stylesheet"
+      href="PA1_template_files/highlight/default.css"
+      type="text/css" />
+<script src="PA1_template_files/highlight/highlight.js"></script>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs && document.readyState && document.readyState === "complete") {
+   window.setTimeout(function() {
+      hljs.initHighlighting();
+   }, 0);
+}
+</script>
+
+
+
+
+</head>
+
+<body>
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+  height: auto;
+}
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+</style>
+
+
+<div class="container-fluid main-container">
+
+<!-- tabsets -->
+<script src="PA1_template_files/navigation-1.0/tabsets.js"></script>
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+</script>
+
+<!-- code folding -->
+
+
+
+
+
+
+<div class="fluid-row" id="header">
+
+
+<h1 class="title">Reproducible Research - Course Project 1</h1>
+<h4 class="author"><em>Jose Lao</em></h4>
+<h4 class="date"><em>17 de abril de 2016</em></h4>
+
+</div>
+
+
+<p>This assignment makes use of data from a personal activity monitoring device. <br><br> This device collects data at 5 minute intervals through out the day.</p>
+<p>The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.</p>
+<p>you will find these files:</p>
+<ul>
+<li>activity.csv –&gt; the RAw data for analisys</li>
+<li>code.R –&gt; with all the R code for performing analisys</li>
+<li>PA1_template.html –&gt; this document</li>
+<li>PA1_template.Rmd –&gt; the RMarkdown document that creates “PA1_template.html”</li>
+</ul>
+<div id="obtaining-raw-data" class="section level3">
+<h3>Obtaining RAW data</h3>
+<p>The data are originally downloaded from: <a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"><a href="https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip">https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip</a></a></p>
+<p>But you can get the file inside the repository, file: <strong>activity.csv</strong></p>
+</div>
+<div id="libraries-used" class="section level3">
+<h3>libraries used</h3>
+<p>Here are the main libraries used.</p>
+<pre class="r"><code>library(ggplot2)</code></pre>
+<pre><code>## Warning: package &#39;ggplot2&#39; was built under R version 3.2.4</code></pre>
+<pre class="r"><code>library(plyr)
+library(reshape2)</code></pre>
+<p>Also it will be necesary to install “impute” library, bacause we need the “impute.knn” function, this is for the k-nearest-neighbors imputation of missing data process. For installing try:</p>
+<pre class="r"><code># source(&quot;https://bioconductor.org/biocLite.R&quot;) # try http:// if https:// URLs are not supported
+# biocLite(&quot;impute&quot;)
+library(impute)</code></pre>
+</div>
+<div id="setting-working-directory" class="section level3">
+<h3>setting working directory</h3>
+<p>use:</p>
+<pre class="r"><code>setwd(&quot;&lt;&lt;your working directory&gt;&gt;&quot;)</code></pre>
+</div>
+<div id="code-for-reading-in-the-dataset-andor-processing-the-data" class="section level3">
+<h3>1) Code for reading in the dataset and/or processing the data</h3>
+<p>Here we will read the data and introduce new columns for classify weekdays and weekend days.</p>
+<pre class="r"><code># Reading data
+DATA &lt;- read.csv(&quot;activity.csv&quot;)
+
+# converting to data class
+DATA$date &lt;- as.Date(strptime(DATA$date,&quot;%Y-%m-%d&quot;))
+
+# introducing weekdays
+DATA$day &lt;- format(DATA$date, &quot;%u&quot;) # Weekday as a decimal number (1–7, Monday is 1)
+DATA$day2 &lt;- as.factor(weekdays(DATA$date, abbreviate=TRUE))
+DATA$weekend &lt;- 0
+DATA$weekend[DATA$day == 6 | DATA$day == 7] &lt;- 1
+DATA$weekend &lt;- factor(DATA$weekend, levels=c(0,1), labels=c(&quot;weekday&quot;,&quot;weekend&quot;))</code></pre>
+<p>The variables included in this dataset are:</p>
+<ul>
+<li>steps: Number of steps taking in a 5-minute interval (missing values are coded as 𝙽𝙰)</li>
+<li>date: The date on which the measurement was taken in YYYY-MM-DD format</li>
+<li>interval: Identifier for the 5-minute interval in which measurement was taken</li>
+</ul>
+<p>The dataset is stored in a comma-separated-value (CSV) file and there are a total of 17,568 observations in this dataset.</p>
+<p>Here there are a example of the data including new columns (day, day and weekend):</p>
+<pre class="r"><code>head(DATA)</code></pre>
+<pre><code>##   steps       date interval day day2 weekend
+## 1    NA 2012-10-01        0   1  lun weekday
+## 2    NA 2012-10-01        5   1  lun weekday
+## 3    NA 2012-10-01       10   1  lun weekday
+## 4    NA 2012-10-01       15   1  lun weekday
+## 5    NA 2012-10-01       20   1  lun weekday
+## 6    NA 2012-10-01       25   1  lun weekday</code></pre>
+</div>
+<div id="histogram-of-the-total-number-of-steps-taken-each-day" class="section level3">
+<h3>2) Histogram of the total number of steps taken each day</h3>
+<p>For the histogram of steps/day we sum the steps for each day usign ddply function</p>
+<pre class="r"><code>DATA.sum.day &lt;- ddply(DATA, .(date), summarize, steps = sum(steps, na.rm=TRUE)) # DATA statistics by day
+ggp1 &lt;- ggplot(data=DATA.sum.day, aes(steps)) + geom_histogram(binwidth=500)
+ggp1 &lt;- ggp1 + xlab(&quot;steps/day&quot;)
+ggp1 &lt;- ggp1 + labs(title = &quot;Histogram of the total number of steps taken each day&quot;)
+plot(ggp1)</code></pre>
+<p><img src="PA1_template_files/figure-html/unnamed-chunk-7-1.png" title="" alt="" style="display: block; margin: auto;" /></p>
+</div>
+<div id="mean-and-median-number-of-steps-taken-each-day" class="section level3">
+<h3>3) Mean and median number of steps taken each day</h3>
+<p>Introducing the mean and median to the previous plot</p>
+<pre class="r"><code>MEAN &lt;- mean(DATA.sum.day$steps)
+MEDIAN &lt;- median(DATA.sum.day$steps)
+ggp1 &lt;- ggp1 + geom_vline(xintercept = MEAN, colour=&quot;blue&quot;)
+ggp1 &lt;- ggp1 + geom_text(aes(x=MEAN, y=0, label=paste0(&quot;MEAN: &quot;,round(MEAN,1))), colour=&quot;blue&quot;, size=5, angle=90, hjust=-1, vjust=-0.5)
+ggp1 &lt;- ggp1 + geom_vline(xintercept = MEDIAN, colour=&quot;cyan&quot;)
+ggp1 &lt;- ggp1 + geom_text(aes(x=MEDIAN, y=0, label=paste0(&quot;MEDIAN: &quot;,round(MEDIAN,1))), colour=&quot;cyan&quot;, size=5, angle=90, hjust=-1, vjust=-0.5)
+plot(ggp1)</code></pre>
+<p><img src="PA1_template_files/figure-html/unnamed-chunk-8-1.png" title="" alt="" style="display: block; margin: auto;" /></p>
+</div>
+<div id="time-series-plot-of-the-average-number-of-steps-taken" class="section level3">
+<h3>4) Time series plot of the average number of steps taken</h3>
+<p>The daily mean requires the ddply function for mean ecah day</p>
+<pre class="r"><code>DATA.mean.interval &lt;- ddply(DATA, .(interval), summarize, steps=mean(steps, na.rm=TRUE))
+ggp2 &lt;- ggplot(data=DATA.mean.interval, aes(interval, steps)) + geom_line(size=1)
+ggp2 &lt;- ggp2 + xlab(&quot;5-min interval of each day&quot;) + ylab(&quot;mean steps/5-min&quot;)
+ggp2 &lt;- ggp2 + labs(title = &quot;Average of 5-min steps by interval&quot;)
+plot(ggp2)</code></pre>
+<p><img src="PA1_template_files/figure-html/unnamed-chunk-9-1.png" title="" alt="" style="display: block; margin: auto;" /></p>
+</div>
+<div id="the-5-minute-interval-that-on-average-contains-the-maximum-number-of-steps" class="section level3">
+<h3>5) The 5-minute interval that, on average, contains the maximum number of steps</h3>
+<p>Identifiying and plotting the max. num of steps in a 5-min interval</p>
+<pre class="r"><code>MAX.interval &lt;- DATA.mean.interval[which.max(DATA.mean.interval$steps), ]
+ggp2 &lt;- ggp2 + geom_point(data=MAX.interval, aes(interval, steps), size=2, color=&quot;red&quot;)
+ggp2 &lt;- ggp2 + geom_text(data=MAX.interval, aes(interval, steps, label=paste0(&quot;MAX:&quot;,round(MAX.interval$steps,1),&quot; steps at interval: &quot;,MAX.interval$interval)), size=4, color=&quot;red&quot;, hjust=-0.1)
+plot(ggp2)</code></pre>
+<p><img src="PA1_template_files/figure-html/unnamed-chunk-10-1.png" title="" alt="" style="display: block; margin: auto;" /></p>
+</div>
+<div id="code-to-describe-and-show-a-strategy-for-imputing-missing-data" class="section level3">
+<h3>6) Code to describe and show a strategy for imputing missing data</h3>
+<p>First of all I want to know how many NAs are…</p>
+<pre class="r"><code># counting number of NA
+table(is.na(DATA$steps))</code></pre>
+<pre><code>## 
+## FALSE  TRUE 
+## 15264  2304</code></pre>
+<pre class="r"><code># there are 2304 NAs, that is the 13% of the whole data:
+2304/(15264 + 2304)</code></pre>
+<pre><code>## [1] 0.1311475</code></pre>
+<p>So there are 13.1147541% of NA values</p>
+<p>For better comprension of NA values I perform some cast.</p>
+<pre class="r"><code>DATA.cast &lt;- dcast(DATA, date+day+day2+weekend~interval, value.var=&quot;steps&quot;)</code></pre>
+<p>We will see that all the NAs are due to full day with no data tracking</p>
+<pre class="r"><code>head(DATA.cast)</code></pre>
+<pre><code>##         date day day2 weekend  0  5 10 15 20 25 30 35 40 45 50 55 100 105
+## 1 2012-10-01   1  lun weekday NA NA NA NA NA NA NA NA NA NA NA NA  NA  NA
+## 2 2012-10-02   2  mar weekday  0  0  0  0  0  0  0  0  0  0  0  0   0   0
+## 3 2012-10-03   3  mié weekday  0  0  0  0  0  0  0  0  0  0  0  0   0   0
+## 4 2012-10-04   4  jue weekday 47  0  0  0  0  0  0  0  0  0  0  0   0   0
+## 5 2012-10-05   5  vie weekday  0  0  0  0  0  0  0  0  0  0  0  0   0   0
+## 6 2012-10-06   6  sáb weekend  0  0  0  0  0  0  0  0  0  0  0  0   0   0
+##   110 115 120 125 130 135 140 145 150 155 200 205 210 215 220 225 230 235
+## 1  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA
+## 2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 3   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 5   0   0   0   0   0   0   0   9  14   0   0   0   0   0   0   7   0   0
+## 6   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+##   240 245 250 255 300 305 310 315 320 325 330 335 340 345 350 355 400 405
+## 1  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA
+## 2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 3   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 5   0   0  27   0   0   0   0   0   0   0   0   0   0   0   0   0   0  39
+## 6   0   0   0   0   0   0   0   0   0   0  40  11   0   0   0   0   0   0
+##   410 415 420 425 430 435 440 445 450 455 500 505 510 515 520 525 530 535
+## 1  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA
+## 2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 3   4   0   0   0  36   0   0   0   0   0   0   0   0   0   0   0   0  25
+## 4   0   0   0   0   0   0   0   0   0   0   0   0   7  18  57  40   0   0
+## 5   0   0   0   0   0   0   0   0   0   0   0  27   0   0   0   0   0   0
+## 6   0   0   0  19  67   0   0   0   0   0   0   0   0   0   0   0   0   0
+##   540 545 550 555 600 605 610 615 620 625 630 635 640 645 650 655 700 705
+## 1  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA
+## 2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 3   0   0  90 411 413 415 519 529 613 562 612 534 323 600 533 251  56   0
+## 4   0   0  16   1   0  18  20  40  36  17  49  86  49   0  29  59   7  25
+## 5   0   0   0  52  36   0   0  28  67 119   7  21  29  68  29   0  11  19
+## 6  27   0   0   0   0   0   0  36  50  38   0   4  42  14   8 135 172 124
+##   710 715 720 725 730 735 740 745 750 755 800 805 810 815 820 825 830 835
+## 1  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA
+## 2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+## 3  32  80  10   9 145  46   0  44 126  42 138  53   0   0  22  57 161  19
+## 4  30  31   7  18 113 181  87   0   0   0  57  99 507 522 510 519 508 423
+## 5  84  50   2  43 126  30  19   8 171  68 114   0   9 122 400 451 371 470
+## 6  31  52   0 104 170  58   0   0  75   0   0 211 321 149   0  82  94 225
+##   840 845 850 855 900 905 910 915 920 925 930 935 940 945 950 955 1000
+## 1  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA  NA   NA
+## 2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0    0
+## 3  15   0  16   0   0   8   0  51 516 245   0 161   7   0   0   0    0
+## 4 499 259  31  17   0   0   0   0   0  17   0 145 453 229 144   0    0
+## 5 473 512 449 496 530 509 252  84  16   0   6  46  39   0   0   0    0
+## 6 216 199  50 187  30   0  65 173  43   0   0   0   0   0   0   0   16
+##   1005 1010 1015 1020 1025 1030 1035 1040 1045 1050 1055 1100 1105 1110
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 4    0   82    0    0    0    0    0    0    0    0    0    0    0    0
+## 5    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 6   26    0    0    0    0    0    0    0    0    0    0    0    0    0
+##   1115 1120 1125 1130 1135 1140 1145 1150 1155 1200 1205 1210 1215 1220
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0    0    0    0   72   73    0    0  116   97    0    0    0    0
+## 4    0    0  180   21    0    0    0    0    0  160   79    0    0    0
+## 5    0    0    0    0    0    0    0    0    0  138  541  555  345  345
+## 6    0    0    0    0   95   64    7   33   72  221  439  519  440  394
+##   1225 1230 1235 1240 1245 1250 1255 1300 1305 1310 1315 1320 1325 1330
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0   15    0    0    0    0    0   80   69    0    0    0    0    0
+## 4   46   66  127    0    0    0    0    0    0   31    0    0    0    0
+## 5   10  485  515  168    0    0    0    0    0    0    0  349  341    0
+## 6   97   71   10   87  443  500  465  485  351  515  511  506  486  171
+##   1335 1340 1345 1350 1355 1400 1405 1410 1415 1420 1425 1430 1435 1440
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0    0   99  100    0    0   33    0    0    7    0    0    0    0
+## 4    0   28  496   78    0    0    0    0    0    0    0    0   77   20
+## 5    0    0    0    0  158  545   82    0  105    0    0    0    0    0
+## 6   12   24   42  140   15    0   43   67   48    0    0    9   31   30
+##   1445 1450 1455 1500 1505 1510 1515 1520 1525 1530 1535 1540 1545 1550
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0    0    0    0    0    0    0    0    0    0    0    0   88  154
+## 4    7    1  128  354  310    0    0   25   15    0    0    0    0   33
+## 5    0    0    0    0    0    0    0    0    0    0    0  326  172  332
+## 6   64  115   25    0   27    0    0    0    0    0    0    0    0    0
+##   1555 1600 1605 1610 1615 1620 1625 1630 1635 1640 1645 1650 1655 1700
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0   20    0    0    0    0    0    0    0    0    0    0    0    0
+## 4   33   32   66   77    0   44    0    0    0    0    0    0    0    0
+## 5  402   70    0    0    0    0    0    0    0    0    0    0    0    0
+## 6    0   27   27    0    0    9    0    0   54   35    0   49    0    0
+##   1705 1710 1715 1720 1725 1730 1735 1740 1745 1750 1755 1800 1805 1810
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0  198   61   75    0    0  193  298    0   15   21    0    0    0
+## 4    0    0    0    0   40    0   37   90   53   73   92  285  527  531
+## 5    0    0   53    0    0    0    0    0    0    7   10   65   40   15
+## 6    0    0   93    0    0   13    0    6   12    0    0   34   77  173
+##   1815 1820 1825 1830 1835 1840 1845 1850 1855 1900 1905 1910 1915 1920
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0   51   36    0   26   22    0   39   52   15   41    0   42    0
+## 4  547  175  114   62    0   59   65    0  101   43    0    0    0   49
+## 5   29    0   20   35   69   25   46   15   26   33   58   75   59    0
+## 6  370  402  504  485  437  526  264    0   35  124   93    0    0    0
+##   1925 1930 1935 1940 1945 1950 1955 2000 2005 2010 2015 2020 2025 2030
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0  159   32    0    0    0    0   34    0    0    0    0   36   73
+## 4   21    0   16   56    0    0    0    0    0    0    0    0    0    0
+## 5    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 6    0    0    0    0    0    0    0    0    0   33  118    0    6    0
+##   2035 2040 2045 2050 2055 2100 2105 2110 2115 2120 2125 2130 2135 2140
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    9    0    0    0    0    0    0    0    0    0    0   90  128   46
+## 4    0   17   15    0    0   27  106  122   41   35    6    0    0   68
+## 5   71    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 6  262   33   46   35    0    0    0    0    0    0    0    0    0    0
+##   2145 2150 2155 2200 2205 2210 2215 2220 2225 2230 2235 2240 2245 2250
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0  117    9    0    0    0    0    0    0    0
+## 3    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 4    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 5    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 6    0    0    0    0    0    0    0    0    0    0    0    0    0    0
+##   2255 2300 2305 2310 2315 2320 2325 2330 2335 2340 2345 2350 2355
+## 1   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA   NA
+## 2    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 3    0    0    0    0    0    0    0    0    0    0    8    0    0
+## 4    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 5    0    0    0    0    0    0    0    0    0    0    0    0    0
+## 6    0    0    0    0    0    0    0    0    0    0    0    0    0</code></pre>
+<p>I will check now if all the NAs are because full day no tracking or there afe days with mixed values and NAs</p>
+<pre class="r"><code># here we can see that all the 2304 NAs are because full day no data recording (DATA.NA subseting)
+DATA.NA &lt;- subset(DATA.cast, is.na(DATA.cast[,5]))</code></pre>
+<p>So we can see that all the NAs are inside the DATA.NA subtable, so all the NAs are full day no tracking:</p>
+<pre class="r"><code>table(is.na(melt(DATA.NA, id=c(&quot;date&quot;,&quot;day&quot;,&quot;day2&quot;, &quot;weekend&quot;))$value))</code></pre>
+<pre><code>## 
+## TRUE 
+## 2304</code></pre>
+<p>so my strategy for Imputing missing values is to use impute.knn function:</p>
+<pre class="r"><code># installing Impute function from Bioconductor.org
+# you need this library for doing a k-nearest-neighbors imputation of missing data 
+# source(&quot;https://bioconductor.org/biocLite.R&quot;) # try http:// if https:// URLs are not supported
+# biocLite(&quot;impute&quot;)
+library(impute)
+
+DATA.imputed &lt;- as.data.frame(impute.knn(as.matrix(DATA.cast[,5:NCOL(DATA.cast)]))$data)</code></pre>
+<pre><code>## Warning in knnimp(x, k, maxmiss = rowmax, maxp = maxp): 8 rows with more than 50 % entries missing;
+##  mean imputation used for these rows</code></pre>
+<pre class="r"><code>DATA.imputed &lt;- cbind(DATA.cast[,1:4], DATA.imputed)</code></pre>
+<p>At now I melt the DATA.imputed data.frame for easy comparation with original DATA:</p>
+<pre class="r"><code># melt the data
+DATA.imputed &lt;- melt(DATA.imputed, id=c(&quot;date&quot;,&quot;day&quot;,&quot;day2&quot;,&quot;weekend&quot;))
+colnames(DATA.imputed) &lt;- c(&quot;date&quot;,&quot;day&quot;,&quot;day2&quot;,&quot;weekend&quot;,&quot;interval&quot;,&quot;steps&quot;)
+DATA.imputed &lt;- DATA.imputed[,c(&quot;steps&quot;,&quot;date&quot;,&quot;interval&quot;,&quot;day&quot;,&quot;day2&quot;,&quot;weekend&quot;)]</code></pre>
+<p>head of original DATA:</p>
+<pre class="r"><code>head(DATA)</code></pre>
+<pre><code>##   steps       date interval day day2 weekend
+## 1    NA 2012-10-01        0   1  lun weekday
+## 2    NA 2012-10-01        5   1  lun weekday
+## 3    NA 2012-10-01       10   1  lun weekday
+## 4    NA 2012-10-01       15   1  lun weekday
+## 5    NA 2012-10-01       20   1  lun weekday
+## 6    NA 2012-10-01       25   1  lun weekday</code></pre>
+<p>head of DATA.imputed:</p>
+<pre class="r"><code>head(DATA.imputed[order(DATA.imputed$date),])</code></pre>
+<pre><code>##         steps       date interval day day2 weekend
+## 1   1.7169811 2012-10-01        0   1  lun weekday
+## 62  0.3396226 2012-10-01        5   1  lun weekday
+## 123 0.1320755 2012-10-01       10   1  lun weekday
+## 184 0.1509434 2012-10-01       15   1  lun weekday
+## 245 0.0754717 2012-10-01       20   1  lun weekday
+## 306 2.0943396 2012-10-01       25   1  lun weekday</code></pre>
+</div>
+<div id="histogram-of-the-total-number-of-steps-taken-each-day-after-missing-values-are-imputed" class="section level3">
+<h3>7) Histogram of the total number of steps taken each day after missing values are imputed</h3>
+<pre class="r"><code>DATA.sum.day.imputed &lt;- ddply(DATA.imputed, .(date), summarize, steps = sum(steps, na.rm=TRUE)) # DATA statistics by day
+ggp3 &lt;- ggplot(data=DATA.sum.day.imputed, aes(steps)) + geom_histogram(binwidth=500)
+ggp3 &lt;- ggp3 + xlab(&quot;steps/day&quot;)
+ggp3 &lt;- ggp3 + labs(title = &quot;Histogram of the total number of steps taken each day (NA data imputed)&quot;)
+MEAN &lt;- mean(DATA.sum.day$steps)
+MEDIAN &lt;- median(DATA.sum.day$steps)
+ggp3 &lt;- ggp3 + geom_vline(xintercept = MEAN, colour=&quot;blue&quot;)
+ggp3 &lt;- ggp3 + geom_text(aes(x=MEAN, y=0, label=paste0(&quot;MEAN: &quot;,round(MEAN,1))), colour=&quot;blue&quot;, size=5, angle=90, hjust=-1, vjust=-0.5)
+ggp3 &lt;- ggp3 + geom_vline(xintercept = MEDIAN, colour=&quot;cyan&quot;)
+ggp3 &lt;- ggp3 + geom_text(aes(x=MEDIAN, y=0, label=paste0(&quot;MEDIAN: &quot;,round(MEDIAN,1))), colour=&quot;cyan&quot;, size=5, angle=90, hjust=-1, vjust=-0.5)</code></pre>
+<p>We can see that the histogram changes, but the mean and median don’t change from the original data:</p>
+<pre class="r"><code>plot(ggp3)</code></pre>
+<p><img src="PA1_template_files/figure-html/unnamed-chunk-21-1.png" title="" alt="" style="display: block; margin: auto;" /></p>
+</div>
+<div id="panel-plot-comparing-the-average-number-of-steps-taken-per-5-minute-interval-across-weekdays-and-weekends" class="section level3">
+<h3>8) Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends</h3>
+<pre class="r"><code>DATA.mean.interval &lt;- ddply(DATA, .(interval, weekend), summarize, steps=mean(steps, na.rm=TRUE))
+ggp4 &lt;- ggplot(data=DATA.mean.interval, aes(interval, steps, colour=weekend)) + geom_line(size=1) + facet_grid(weekend~.)
+ggp4 &lt;- ggp4 + xlab(&quot;5-min interval of each day&quot;) + ylab(&quot;mean steps/5-min&quot;)
+ggp4 &lt;- ggp4 + labs(title = &quot;Average of 5-min steps by interval&quot;)
+plot(ggp4)</code></pre>
+<p><img src="PA1_template_files/figure-html/unnamed-chunk-22-1.png" title="" alt="" style="display: block; margin: auto;" /></p>
+</div>
+
+
+
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+$(document).ready(function () {
+  $('tr.header').parent('thead').parent('table').addClass('table table-condensed');
+});
+
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
